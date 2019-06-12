@@ -28,7 +28,7 @@
  * the years:
  * - Peter A.N. Bosman
  * - Dirk Thierens
- * - Jörn Grahl
+ * - Jï¿½rn Grahl
  *
  * This is the most up-to-date literature reference regarding this software:
  *
@@ -37,10 +37,10 @@
  * J. Bacardit, C. Bates Congdon, H.-G. Beyer, M. Birattari, C. Blum,
  * P.A.N. Bosman, D. Corne, C. Cotta, M. Di Penta, B. Doerr, R. Drechsler,
  * M. Ebner, J. Grahl, T. Jansen, J. Knowles, T. Lenaerts, M. Middendorf,
- * J.F. Miller, M. O'Neill, R. Poli, G. Squillero, K. Stanley, T. Stützle
+ * J.F. Miller, M. O'Neill, R. Poli, G. Squillero, K. Stanley, T. Stï¿½tzle
  * and J. van Hemert, editors, Proceedings of the Genetic and Evolutionary
  * Computation Conference - GECCO-2009, pages 389-396, ACM Press, New York,
- * New York, 2009. 
+ * New York, 2009.
  */
 
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-= Section Includes -=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
@@ -93,9 +93,9 @@ int numberOfInstalledProblems( void );
 double installedProblemLowerRangeBound( int index, int dimension );
 double installedProblemUpperRangeBound( int index, int dimension );
 short isParameterInRangeBounds( double parameter, int dimension );
-void installedProblemEvaluation( int index, double *parameters, double *objective_value, double *constraint_value );
-void installedProblemEvaluationWithoutRotation( int index, double *parameters, double *objective_value, double *constraint_value );
-void sphereFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
+void installedProblemEvaluation( int index, int population_index, double *parameters, double *objective_value, double *constraint_value );
+void installedProblemEvaluationWithoutRotation( int index, int population_index, double *parameters, double *objective_value, double *constraint_value );
+void sphereFunctionProblemEvaluation( double *parameters, int population_index, double *objective_value, double *constraint_value );
 double sphereFunctionProblemLowerRangeBound( int dimension );
 double sphereFunctionProblemUpperRangeBound( int dimension );
 void ellipsoidFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
@@ -236,16 +236,16 @@ double     tau,                              /* The selection truncation percent
 int64_t    random_seed,                      /* The seed used for the random-number generator. */
            random_seed_changing;             /* Internally used variable for randomly setting a random seed. */
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
-
+// Edited: Add new global variables
+double    *current_best;                          /* Keep track of current best value for every population. */
+int       total_amount_of_parameters = 10;        /* Total length of function parameters to be evaluated, this is longer than amount_of_parameters */
+/*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
 
 
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-= Section Constants -=-=-=-=-=-=-=-=-=-=-=-=-=-*/
 #define PI 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
-
-
-
 
 
 
@@ -298,11 +298,11 @@ double vectorDotProduct( double *vector0, double *vector1, int n0 )
 {
   int    i;
   double result;
-  
+
   result = 0.0;
   for( i = 0; i < n0; i++ )
     result += vector0[i]*vector1[i];
-    
+
   return( result );
 }
 
@@ -315,11 +315,11 @@ double *matrixVectorMultiplication( double **matrix, double *vector, int n0, int
 {
   int     i;
   double *result;
-  
+
   result = (double *) malloc( n0*sizeof( double ) );
   for( i = 0; i < n0; i++ )
     result[i] = vectorDotProduct( matrix[i], vector, n1 );
-  
+
   return( result );
 }
 
@@ -331,7 +331,7 @@ double **matrixMatrixMultiplication( double **matrix0, double **matrix1, int n0,
 {
   int     i, j, k;
   double **result;
-  
+
   result = (double **) malloc( n0*sizeof( double * ) );
   for( i = 0; i < n0; i++ )
     result[i] = (double *) malloc( n2*sizeof( double ) );
@@ -345,7 +345,7 @@ double **matrixMatrixMultiplication( double **matrix0, double **matrix1, int n0,
         result[i][j] += matrix0[i][k]*matrix1[k][j];
     }
   }
-  
+
   return( result );
 }
 
@@ -355,7 +355,7 @@ double **matrixMatrixMultiplication( double **matrix0, double **matrix1, int n0,
 int blasDSWAP( int n, double *dx, int incx, double *dy, int incy )
 {
   double dtmp;
-  
+
   if (n > 0)
   {
     incx *= sizeof( double );
@@ -382,7 +382,7 @@ int blasDSWAP( int n, double *dx, int incx, double *dy, int incy )
 int blasDAXPY(int n, double da, double *dx, int incx, double *dy, int incy)
 {
   double dtmp0, dtmp, *dx0, *dy0;
-  
+
   if( n > 0 && da != 0. )
   {
     incx *= sizeof(double);
@@ -402,8 +402,8 @@ int blasDAXPY(int n, double da, double *dx, int incx, double *dy, int incy)
       dy0   = (double *) ((char *) dy + incy);
       dy    = (double *) ((char *) dy0 + incy);
       dtmp0 = (*dy0);
-      dtmp  = (*dy); 
-      dx0   = (double *) ((char *) dx + incx); 
+      dtmp  = (*dy);
+      dx0   = (double *) ((char *) dx + incx);
       dx    = (double *) ((char *) dx0 + incx);
       *dy0  = dtmp0 + da * (*dx0);
       *dy   = dtmp + da * (*dx);
@@ -545,7 +545,7 @@ double **choleskyDecomposition( double **matrix, int n )
 {
   int     i, j, k, info, *ipvt;
   double *a, *work, **result;
-  
+
   a    = (double *) Malloc( n*n*sizeof( double ) );
   work = (double *) Malloc( n*sizeof( double ) );
   ipvt = (int *) Malloc( n*sizeof( int ) );
@@ -592,7 +592,7 @@ double **choleskyDecomposition( double **matrix, int n )
   free( ipvt );
   free( work );
   free( a );
-  
+
   return( result );
 }
 
@@ -640,7 +640,7 @@ double **matrixLowerTriangularInverse( double **matrix, int n )
 {
   int     i, j, k, info;
   double *t, **result;
-  
+
   t = (double *) Malloc( n*n*sizeof( double ) );
 
   k = 0;
@@ -667,7 +667,7 @@ double **matrixLowerTriangularInverse( double **matrix, int n )
   }
 
   free( t );
-  
+
   return( result );
 }
 
@@ -678,7 +678,7 @@ void matrixWriteToFile( FILE *file, double **matrix, int n0, int n1 )
 {
   int  i, j;
   char line_for_output[10000];
-  
+
   sprintf( line_for_output, "[" );
   fputs( line_for_output, file );
   for( i = 0; i < n0; i++ )
@@ -881,7 +881,7 @@ void mergeSortFitnessMerge( double *objectives, double *constraints, int *sorted
 void interpretCommandLine( int argc, char **argv )
 {
   parseCommandLine( argc, argv );
-  
+
   if( use_guidelines )
   {
     tau                              = 0.35;
@@ -905,7 +905,7 @@ void parseCommandLine( int argc, char **argv )
   index = 1;
 
   parseOptions( argc, argv, &index );
-  
+
   parseParameters( argc, argv, &index );
 }
 
@@ -1074,7 +1074,7 @@ void checkOptions( void )
 
     exit( 0 );
   }
-  
+
   if( population_size < 1 )
   {
     printf("\n");
@@ -1101,7 +1101,7 @@ void checkOptions( void )
 
     exit( 0 );
   }
-  
+
   if( installedProblemName( problem_index ) == NULL )
   {
     printf("\n");
@@ -1118,7 +1118,7 @@ void checkOptions( void )
 void printVerboseOverview( void )
 {
   int i;
-  
+
   printf("### Settings ######################################\n");
   printf("#\n");
   printf("# Statistics writing every generation: %s\n", write_generational_statistics ? "enabled" : "disabled");
@@ -1182,16 +1182,16 @@ double randomRealUniform01( void )
 
   return( result );
 }
-        
+
 /**
  * Returns a random integer, distributed uniformly between 0 and maximum.
  */
 int randomInt( int maximum )
 {
   int result;
-  
+
   result = (int) (((double) maximum)*randomRealUniform01());
-  
+
   return( result );
 }
 
@@ -1253,7 +1253,7 @@ char *installedProblemName( int index )
     case 11: return( (char *) "Michalewicz" );
     case 12: return( (char *) "Rastrigin" );
   }
-  
+
   return( NULL );
 }
 
@@ -1263,14 +1263,14 @@ char *installedProblemName( int index )
 int numberOfInstalledProblems( void )
 {
   static int result = -1;
-  
+
   if( result == -1 )
   {
     result = 0;
     while( installedProblemName( result ) != NULL )
       result++;
   }
-  
+
   return( result );
 }
 
@@ -1295,7 +1295,7 @@ double installedProblemLowerRangeBound( int index, int dimension )
     case 11: return( michalewiczFunctionLowerRangeBound( dimension ) );
     case 12: return( rastriginFunctionLowerRangeBound( dimension ) );
   }
-  
+
   return( 0.0 );
 }
 
@@ -1320,7 +1320,7 @@ double installedProblemUpperRangeBound( int index, int dimension )
     case 11: return( michalewiczFunctionUpperRangeBound( dimension ) );
     case 12: return( rastriginFunctionUpperRangeBound( dimension ) );
   }
-  
+
   return( 0.0 );
 }
 
@@ -1336,7 +1336,7 @@ short isParameterInRangeBounds( double parameter, int dimension )
   {
     return( 0 );
   }
-  
+
   return( 1 );
 }
 
@@ -1346,19 +1346,19 @@ short isParameterInRangeBounds( double parameter, int dimension )
  * function after rotating the parameter vector.
  * Both are returned using pointer variables.
  */
-void installedProblemEvaluation( int index, double *parameters, double *objective_value, double *constraint_value )
+void installedProblemEvaluation( int index, int population_index, double *parameters, double *objective_value, double *constraint_value )
 {
   double *rotated_parameters;
 
   number_of_evaluations++;
 
   if( rotation_angle == 0.0 )
-    installedProblemEvaluationWithoutRotation( index, parameters, objective_value, constraint_value );
+    installedProblemEvaluationWithoutRotation( index, population_index, parameters, objective_value, constraint_value );
   else
   {
     rotated_parameters = matrixVectorMultiplication( rotation_matrix, parameters, number_of_parameters, number_of_parameters );
 
-    installedProblemEvaluationWithoutRotation( index, rotated_parameters, objective_value, constraint_value );
+    installedProblemEvaluationWithoutRotation( index, population_index, rotated_parameters, objective_value, constraint_value );
 
     free( rotated_parameters );
   }
@@ -1370,14 +1370,14 @@ void installedProblemEvaluation( int index, double *parameters, double *objectiv
  * without rotating the parameter vector.
  * Both are returned using pointer variables.
  */
-void installedProblemEvaluationWithoutRotation( int index, double *parameters, double *objective_value, double *constraint_value )
+void installedProblemEvaluationWithoutRotation( int index, int population_index, double *parameters, double *objective_value, double *constraint_value )
 {
   *objective_value  = 0.0;
   *constraint_value = 0.0;
 
   switch( index )
   {
-    case  0: sphereFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
+    case  0: sphereFunctionProblemEvaluation( parameters, population_index, objective_value, constraint_value ); break;
     case  1: ellipsoidFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
     case  2: cigarFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
     case  3: tabletFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
@@ -1393,15 +1393,21 @@ void installedProblemEvaluationWithoutRotation( int index, double *parameters, d
   }
 }
 
-void sphereFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value )
+void sphereFunctionProblemEvaluation( double *parameters, int population_index, double *objective_value, double *constraint_value )
 {
   int    i;
   double result;
 
   result = 0.0;
-  for( i = 0; i < number_of_parameters; i++ )
-    result += parameters[i]*parameters[i];
-
+  for( i = 0; i < total_amount_of_parameters; i++ ) {
+    // Use own parameters for the related values
+    if (i <= population_index && population_index < i + number_of_parameters) {
+      result += parameters[i - population_index] * parameters[i - population_index]; // Edited: Problem has been changed to only check parameter of current population
+    } else {
+      // If we do not have a value of a needed parameter, use the global current_best value.
+      result += current_best[i] * current_best[i]; // TODO: Don't recalculate entire result array
+    }
+  }
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1420,11 +1426,11 @@ void ellipsoidFunctionProblemEvaluation( double *parameters, double *objective_v
 {
   int    i;
   double result;
-  
+
   result = 0.0;
   for( i = 0; i < number_of_parameters; i++ )
     result += pow( 10.0, 6.0*(((double) (i))/((double) (number_of_parameters-1))) )*parameters[i]*parameters[i];
-  
+
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1443,13 +1449,13 @@ void cigarFunctionProblemEvaluation( double *parameters, double *objective_value
 {
   int    i;
   double result;
-  
+
   result = parameters[0]*parameters[0];
   for( i = 1; i < number_of_parameters; i++ )
   {
     result += pow( 10.0, 6.0 )*parameters[i]*parameters[i];
   }
-  
+
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1468,11 +1474,11 @@ void tabletFunctionProblemEvaluation( double *parameters, double *objective_valu
 {
   int    i;
   double result;
-  
+
   result = pow( 10.0, 6.0 )*parameters[0]*parameters[0];
   for( i = 1; i < number_of_parameters; i++ )
     result += parameters[i]*parameters[i];
-  
+
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1491,12 +1497,12 @@ void cigarTabletFunctionProblemEvaluation( double *parameters, double *objective
 {
   int    i;
   double result;
-  
+
   result = parameters[0]*parameters[0];
   for( i = 1; i < number_of_parameters-1; i++ )
     result += pow( 10.0, 4.0 )*parameters[i]*parameters[i];
   result += pow( 10.0, 8.0 )*parameters[number_of_parameters-1]*parameters[number_of_parameters-1];
-  
+
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1515,13 +1521,13 @@ void twoAxesFunctionProblemEvaluation( double *parameters, double *objective_val
 {
   int    i;
   double result;
-  
+
   result = 0.0;
   for( i = 0; i <= (number_of_parameters/2)-1; i++ )
     result += pow( 10.0, 6.0 )*parameters[i]*parameters[i];
   for( i = (number_of_parameters/2); i < number_of_parameters; i++ )
     result += parameters[i]*parameters[i];
-  
+
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1540,11 +1546,11 @@ void differentPowersFunctionProblemEvaluation( double *parameters, double *objec
 {
   int    i;
   double result;
-  
+
   result = 0.0;
   for( i = 0; i < number_of_parameters; i++ )
     result += pow( fabs(parameters[i]), 2.0 + 10.0*(((double) (i))/((double) (number_of_parameters-1))) );
-  
+
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1563,7 +1569,7 @@ void rosenbrockFunctionProblemEvaluation( double *parameters, double *objective_
 {
   int    i;
   double result;
-  
+
   result = 0.0;
   for( i = 0; i < number_of_parameters-1; i++ )
     result += 100*(parameters[i+1]-parameters[i]*parameters[i])*(parameters[i+1]-parameters[i]*parameters[i]) + (1.0-parameters[i])*(1.0-parameters[i]);
@@ -1590,9 +1596,9 @@ void parabolicRidgeFunctionProblemEvaluation( double *parameters, double *object
   sum = 0;
   for( i = 1; i < number_of_parameters; i++ )
     sum += parameters[i]*parameters[i];
-  
+
   result = -parameters[0] + 100.0*sum;
-  
+
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1611,13 +1617,13 @@ void sharpRidgeFunctionProblemEvaluation( double *parameters, double *objective_
 {
   int    i;
   double sum, result;
-  
+
   sum = 0;
   for( i = 1; i < number_of_parameters; i++ )
     sum += parameters[i]*parameters[i];
-  
+
   result = -parameters[0] + 100.0*sqrt( sum );
-  
+
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -1726,7 +1732,7 @@ void initialize( void )
 
   alpha_AMS = 0.5*tau*(((double) population_size)/((double) (population_size-1)));
   delta_AMS = 2.0;
-  
+
   initializeMemory();
 
   initializeRandomNumberGenerator();
@@ -1764,6 +1770,7 @@ void initializeMemory( void )
   mean_vectors_previous            = (double **) Malloc( number_of_populations*sizeof( double * ) );
   covariance_matrices              = (double ***) Malloc( number_of_populations*sizeof( double ** ) );
   cholesky_factors_lower_triangle  = (double ***) Malloc( number_of_populations*sizeof( double ** ) );
+  current_best                     = (double *) Malloc( total_amount_of_parameters*sizeof( double ) ); // Edited: Malloc current best
 
   for( i = 0; i < number_of_populations; i++ )
   {
@@ -1776,7 +1783,7 @@ void initializeMemory( void )
     no_improvement_stretch[i] = 0;
 
     objective_values[i] = (double *) Malloc( population_size*sizeof( double ) );
-    
+
     constraint_values[i] = (double *) Malloc( population_size*sizeof( double ) );
 
     ranks[i] = (double *) Malloc( population_size*sizeof( double ) );
@@ -1796,7 +1803,7 @@ void initializeMemory( void )
     covariance_matrices[i] = (double **) Malloc( number_of_parameters*sizeof( double * ) );
     for( j = 0; j < number_of_parameters; j++ )
       covariance_matrices[i][j] = (double *) Malloc( number_of_parameters*sizeof( double ) );
-    
+
     cholesky_factors_lower_triangle[i] = NULL;
   }
 
@@ -1880,10 +1887,23 @@ void initializePopulationsAndFitnessValues( void )
     for( j = 0; j < population_size; j++ )
     {
       for( k = 0; k < number_of_parameters; k++ )
+      {
         populations[i][j][k] = lower_init_ranges[k] + (upper_init_ranges[k] - lower_init_ranges[k])*randomRealUniform01();
+      }
 
-      installedProblemEvaluation( problem_index, populations[i][j], &(objective_values[i][j]), &(constraint_values[i][j]) );
+      installedProblemEvaluation( problem_index, i, populations[i][j], &(objective_values[i][j]), &(constraint_values[i][j]) );
     }
+
+    // Edited: find current best value of population
+    sorted = mergeSortFitness( objective_values[i], constraint_values[i], population_size );
+
+    // Edited: Update global current_best array for any values found.
+    for (int f = 0; f < number_of_parameters; f++ ) {
+      current_best[i + f] = populations[i][sorted[0]][f];
+    }
+
+    free( sorted );
+
   }
 }
 
@@ -1934,7 +1954,7 @@ void initializeObjectiveRotationMatrix( void )
       matrix[index0][index1] = -sin_theta;
       matrix[index1][index0] = sin_theta;
       matrix[index1][index1] = cos_theta;
-      
+
       product = matrixMatrixMultiplication( matrix, rotation_matrix, number_of_parameters, number_of_parameters, number_of_parameters );
       for( i = 0; i < number_of_parameters; i++ )
         for( j = 0; j < number_of_parameters; j++ )
@@ -1977,7 +1997,7 @@ void computeRanksForOnePopulation( int population_index )
   int i, *sorted, rank;
 
   sorted = mergeSortFitness( objective_values[population_index], constraint_values[population_index], population_size );
-  
+
   rank                               = 0;
   ranks[population_index][sorted[0]] = rank;
   for( i = 1; i < population_size; i++ )
@@ -1999,7 +2019,7 @@ double distanceInParameterSpace( double *solution_a, double *solution_b )
 {
   int    i;
   double value, result;
-  
+
   result = 0.0;
   for( i = 0; i < number_of_parameters; i++ )
   {
@@ -2007,7 +2027,7 @@ double distanceInParameterSpace( double *solution_a, double *solution_b )
     result += value*value;
   }
   result = sqrt( result );
-  
+
   return( result );
 }
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
@@ -2174,7 +2194,7 @@ void writeGenerationalStatistics( void )
   }
   sprintf( string, " ]\n" );
   fputs( string, file );
-  
+
   fclose( file );
 
   free( population_objective_avg );
@@ -2208,7 +2228,7 @@ void writeGenerationalSolutions( short final )
   else
     sprintf( string, "all_populations_generation_%05d.dat", number_of_generations );
   file_all = fopen( string, "w" );
-  
+
   for( i = 0; i < number_of_populations; i++ )
   {
     if( final )
@@ -2222,7 +2242,7 @@ void writeGenerationalSolutions( short final )
       sprintf( string, "selection_%05d_generation_%05d.dat", i, number_of_generations-1 );
       file_selection = fopen( string, "w" );
     }
-    
+
     /* Populations */
     for( j = 0; j < population_size; j++ )
     {
@@ -2248,9 +2268,9 @@ void writeGenerationalSolutions( short final )
       fputs( string, file_all );
       fputs( string, file_population );
     }
-    
+
     fclose( file_population );
-    
+
     /* Selections */
     if( number_of_generations > 0 && !final )
     {
@@ -2276,7 +2296,7 @@ void writeGenerationalSolutions( short final )
       fclose( file_selection );
     }
   }
-  
+
   fclose( file_all );
 
   writeGenerationalSolutionsBest( final );
@@ -2303,7 +2323,7 @@ void writeGenerationalSolutionsBest( short final )
 
   /* First find the best of all */
   determineBestSolutionInCurrentPopulations( &population_index_best, &individual_index_best );
-  
+
   /* Then output it */
   if( final )
     sprintf( string, "best_generation_final.dat" );
@@ -2347,7 +2367,7 @@ short checkTerminationCondition( void )
 
   if( checkNumberOfEvaluationsTerminationCondition() )
     return( 1 );
-  
+
   if( use_vtr )
   {
     if( checkVTRTerminationCondition() )
@@ -2394,7 +2414,7 @@ short checkVTRTerminationCondition( void )
 
   if( constraint_values[population_of_best][index_of_best] == 0 && objective_values[population_of_best][index_of_best] <= vtr  )
     return( 1 );
-    
+
   return( 0 );
 }
 
@@ -2446,7 +2466,7 @@ short checkFitnessVarianceTerminationSinglePopulation( int population_index )
 {
   int    i;
   double objective_avg, objective_var;
-  
+
   objective_avg = 0.0;
   for( i = 0; i < population_size; i++ )
     objective_avg  += objective_values[population_index][i];
@@ -2494,7 +2514,7 @@ void checkDistributionMultiplierTerminationCondition( void )
 void makeSelections( void )
 {
   int i;
-  
+
   for( i = 0; i < number_of_populations; i++ )
     if( !populations_terminated[i] )
       makeSelectionsForOnePopulation( i );
@@ -2506,7 +2526,7 @@ void makeSelections( void )
 void makeSelectionsForOnePopulation( int population_index )
 {
   int i, j, *sorted;
-  
+
   sorted = mergeSort( ranks[population_index], population_size );
 
   if( ranks[population_index][sorted[selection_size-1]] == 0 )
@@ -2522,7 +2542,7 @@ void makeSelectionsForOnePopulation( int population_index )
       constraint_values_selections[population_index][i] = constraint_values[population_index][sorted[i]];
     }
   }
-  
+
   free( sorted );
 }
 
@@ -2575,7 +2595,7 @@ void makeSelectionsForOnePopulationUsingDiversityOnRank0( int population_index )
   nn_distances = (double *) Malloc( number_of_rank0_solutions*sizeof( double ) );
   for( i = 0; i < number_of_rank0_solutions; i++ )
     nn_distances[i] = distanceInParameterSpace( populations[population_index][preselection_indices[i]], populations[population_index][selection_indices[number_selected_so_far-1]] );
-  
+
   while( number_selected_so_far < selection_size )
   {
     index_of_farthest    = 0;
@@ -2588,7 +2608,7 @@ void makeSelectionsForOnePopulationUsingDiversityOnRank0( int population_index )
         distance_of_farthest = nn_distances[i];
       }
     }
-    
+
     selection_indices[number_selected_so_far] = preselection_indices[index_of_farthest];
     preselection_indices[index_of_farthest]   = preselection_indices[number_of_rank0_solutions-1];
     nn_distances[index_of_farthest]           = nn_distances[number_of_rank0_solutions-1];
@@ -2637,7 +2657,7 @@ void makeSelectionsForOnePopulationUsingDiversityOnRank0( int population_index )
 void makePopulations( void )
 {
   estimateParametersAllPopulations();
-  
+
   copyBestSolutionsToPopulations();
 
   applyDistributionMultipliers();
@@ -2769,7 +2789,7 @@ void copyBestSolutionsToPopulations( void )
 void applyDistributionMultipliers( void )
 {
   int i, j, k;
-  
+
   for( i = 0; i < number_of_populations; i++ )
   {
     if( !populations_terminated[i] )
@@ -2788,7 +2808,7 @@ void applyDistributionMultipliers( void )
 void generateAndEvaluateNewSolutionsToFillPopulations( void )
 {
   short   out_of_range;
-  int     i, j, k, q, number_of_AMS_solutions;
+  int     i, j, k, q, number_of_AMS_solutions, *sorted;
   double *solution, *solution_AMS, shrink_factor;
 
   solution_AMS = (double *) Malloc( number_of_parameters*sizeof( double ) );
@@ -2806,10 +2826,10 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
       for( j = 1; j < population_size; j++ )
       {
         solution = generateNewSolution( i );
-  
+
         for( k = 0; k < number_of_parameters; k++ )
           populations[i][j][k] = solution[k];
-  
+
         if( (number_of_generations > 0) && (q < number_of_AMS_solutions) )
         {
           out_of_range  = 1;
@@ -2834,14 +2854,22 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
               populations[i][j][k] = solution_AMS[k];
           }
         }
-  
-        installedProblemEvaluation( problem_index, populations[i][j], &(objective_values[i][j]), &(constraint_values[i][j]) );
-  
+
+        installedProblemEvaluation( problem_index, i, populations[i][j], &(objective_values[i][j]), &(constraint_values[i][j]) );
+
         q++;
-  
+
         free( solution );
       }
     }
+
+    sorted = mergeSortFitness( objective_values[i], constraint_values[i], population_size ); // Edited find current best value of population and update global array
+
+    for (int f = 0; f < number_of_parameters; f++ ) {
+      current_best[i + f] = populations[i][sorted[0]][f];
+    }
+
+    free( sorted );
   }
 
   free( solution_AMS );
@@ -2904,7 +2932,7 @@ double *generateNewSolution( int population_index )
 
       free( z );
     }
-    
+
     ready = 1;
     for( i = 0; i < number_of_parameters; i++ )
     {
@@ -2938,16 +2966,16 @@ void adaptDistributionMultipliers( void )
     {
       if( (((double) out_of_bounds_draws[i])/((double) samples_drawn_from_normal[i])) > 0.9 )
         distribution_multipliers[i] *= 0.5;
-  
+
       improvement = generationalImprovementForOnePopulation( i, &st_dev_ratio );
-  
+
       if( improvement )
       {
         no_improvement_stretch[i] = 0;
 
         if( distribution_multipliers[i] < 1.0 )
           distribution_multipliers[i] = 1.0;
-  
+
         if( st_dev_ratio > st_dev_ratio_threshold )
           distribution_multipliers[i] *= distribution_multiplier_increase;
       }
@@ -2955,10 +2983,10 @@ void adaptDistributionMultipliers( void )
       {
         if( distribution_multipliers[i] <= 1.0 )
           (no_improvement_stretch[i])++;
-  
+
         if( (distribution_multipliers[i] > 1.0) || (no_improvement_stretch[i] >= maximum_no_improvement_stretch) )
           distribution_multipliers[i] *= distribution_multiplier_decrease;
-  
+
         if( (no_improvement_stretch[i] < maximum_no_improvement_stretch) && (distribution_multipliers[i] < 1.0) )
           distribution_multipliers[i] = 1.0;
       }
@@ -3037,7 +3065,7 @@ short generationalImprovementForOnePopulation( int population_index, double *st_
 short betterFitness( double objective_value_x, double constraint_value_x, double objective_value_y, double constraint_value_y )
 {
   short result;
-  
+
   result = 0;
 
   if( constraint_value_x > 0 ) /* x is infeasible */
@@ -3074,7 +3102,7 @@ double getStDevRatio( int population_index, double *parameters )
   inverse = matrixLowerTriangularInverse( cholesky_factors_lower_triangle[population_index], number_of_parameters );
 
   x_min_mu = (double *) Malloc( number_of_parameters*sizeof( double ) );
-  
+
   for( i = 0; i < number_of_parameters; i++ )
     x_min_mu[i] = parameters[i]-mean_vectors[population_index][i];
 
@@ -3110,7 +3138,7 @@ void ezilaitini( void )
   ezilaitiniMemory();
 
   ezilaitiniDistributionMultipliers();
-  
+
   ezilaitiniObjectiveRotationMatrix();
 }
 
@@ -3126,9 +3154,9 @@ void ezilaitiniMemory( void )
     for( j = 0; j < population_size; j++ )
       free( populations[i][j] );
     free( populations[i] );
-    
+
     free( objective_values[i] );
-    
+
     free( constraint_values[i] );
 
     free( ranks[i] );
@@ -3174,6 +3202,7 @@ void ezilaitiniMemory( void )
   free( constraint_values_selections );
   free( mean_vectors );
   free( mean_vectors_previous );
+  free( current_best );
 }
 
 /**
@@ -3226,7 +3255,7 @@ void run( void )
       writeGenerationalSolutions( 0 );
 
     makeSelections();
-    
+
     makePopulations();
 
     number_of_generations++;
@@ -3235,8 +3264,13 @@ void run( void )
    writeGenerationalStatistics();
 
    writeGenerationalSolutions( 1 );
-   
+
    ezilaitini();
+
+   // Edited: Print current best at the end of process to check whether we did indeed find the best values
+   for (int i = 0; i < 10; i++) {
+     printf("(%lf) ^ 2 + \n",current_best[i]);
+ }
 }
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
