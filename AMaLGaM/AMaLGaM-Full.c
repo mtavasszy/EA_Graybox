@@ -238,7 +238,7 @@ int64_t    random_seed,                      /* The seed used for the random-num
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 // Edited: Add new global variables
 double    *current_best;                          /* Keep track of current best value for every population. */
-int       total_amount_of_parameters = 10;        /* Total length of function parameters to be evaluated, this is longer than amount_of_parameters */
+int       total_amount_of_parameters;        /* Total length of function parameters to be evaluated, this is longer than amount_of_parameters */
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
 
@@ -986,7 +986,7 @@ void parseParameters( int argc, char **argv, int *index )
 {
   int noError;
 
-  if( (argc - *index) != 14 )
+  if( (argc - *index) != 15 )
   {
     printf("Number of parameters is incorrect, require 14 parameters (you provided %d).\n\n", (argc - *index));
 
@@ -1008,6 +1008,7 @@ void parseParameters( int argc, char **argv, int *index )
   noError = noError && sscanf( argv[*index+11], "%lf", &vtr );
   noError = noError && sscanf( argv[*index+12], "%d", &maximum_no_improvement_stretch );
   noError = noError && sscanf( argv[*index+13], "%lf", &fitness_variance_tolerance );
+  noError = noError && sscanf( argv[*index+14], "%d", &total_amount_of_parameters );
 
   if( !noError )
   {
@@ -1022,7 +1023,7 @@ void parseParameters( int argc, char **argv, int *index )
  */
 void printUsage( void )
 {
-  printf("Usage: AMaLGaM-Full [-?] [-P] [-s] [-w] [-v] [-r] [-g] pro dim low upp rot tau pop nop dmd srt eva vtr imp tol\n");
+  printf("Usage: AMaLGaM-Full [-?] [-P] [-s] [-w] [-v] [-r] [-g] pro dim low upp rot tau pop nop dmd srt eva vtr imp tol prosize\n");
   printf(" -?: Prints out this usage information.\n");
   printf(" -P: Prints out a list of all installed optimization problems.\n");
   printf(" -s: Enables computing and writing of statistics every generation.\n");
@@ -1049,6 +1050,7 @@ void printUsage( void )
   printf("  imp: Maximum number of subsequent generations without an improvement while the\n");
   printf("       the distribution multiplier is <= 1.0.\n");
   printf("  tol: The tolerance level for fitness variance (i.e. minimum fitness variance)\n");
+  printf("  prosize: The total length of the problem instance (The number of parameters you would provide in a conventional EA)\n");
   exit( 0 );
 }
 
@@ -3268,7 +3270,7 @@ void run( void )
    ezilaitini();
 
    // Edited: Print current best at the end of process to check whether we did indeed find the best values
-   for (int i = 0; i < 10; i++) {
+   for (int i = 0; i < total_amount_of_parameters; i++) {
      printf("(%lf) ^ 2 + \n",current_best[i]);
  }
 }
