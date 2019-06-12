@@ -116,7 +116,7 @@ double twoAxesFunctionUpperRangeBound( int dimension );
 void differentPowersFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
 double differentPowersFunctionLowerRangeBound( int dimension );
 double differentPowersFunctionUpperRangeBound( int dimension );
-void rosenbrockFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
+void rosenbrockFunctionProblemEvaluation( double *parameters, int population_index, double *objective_value, double *constraint_value );
 double rosenbrockFunctionLowerRangeBound( int dimension );
 double rosenbrockFunctionUpperRangeBound( int dimension );
 void parabolicRidgeFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
@@ -1386,7 +1386,7 @@ void installedProblemEvaluationWithoutRotation( int index, int population_index,
     case  4: cigarTabletFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
     case  5: twoAxesFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
     case  6: differentPowersFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
-    case  7: rosenbrockFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
+    case  7: rosenbrockFunctionProblemEvaluation( parameters, population_index, objective_value, constraint_value ); break;
     case  8: parabolicRidgeFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
     case  9: sharpRidgeFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
     case 10: griewankFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
@@ -1567,15 +1567,27 @@ double differentPowersFunctionUpperRangeBound( int dimension )
   return( 1e+308 );
 }
 
-void rosenbrockFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value )
+void rosenbrockFunctionProblemEvaluation( double *parameters, int population_index, double *objective_value, double *constraint_value )
 {
   int    i;
   double result;
 
   result = 0.0;
-  for( i = 0; i < number_of_parameters-1; i++ )
-    result += 100*(parameters[i+1]-parameters[i]*parameters[i])*(parameters[i+1]-parameters[i]*parameters[i]) + (1.0-parameters[i])*(1.0-parameters[i]);
+  for( i = 0; i < total_amount_of_parameters-1; i++ )
 
+    // If we have the parameters in the current population
+    // Overwrite them to come to a solution.
+    if (i <= population_index && population_index < i + number_of_parameters) {
+      int next = i+1 - population_index;
+      int current = i - population_index;
+
+      result += 100*(parameters[next]-parameters[current]*parameters[current])
+                  * (parameters[next]-parameters[current]*parameters[current])
+                    + (1.0-parameters[current])*(1.0-parameters[current]);
+    } else {
+      // If we do not have the paremeters, use the current_best
+      result += 100*(current_best[i+1]-current_best[i]*current_best[i])*(current_best[i+1]-current_best[i]*current_best[i]) + (1.0-current_best[i])*(1.0-current_best[i]);
+    }
   *objective_value  = result;
   *constraint_value = 0;
 }
@@ -2528,21 +2540,23 @@ void makeSelections( void )
 void makeSelectionsForOnePopulation( int population_index )
 {
   int i, j, *sorted;
-
   sorted = mergeSort( ranks[population_index], population_size );
 
   if( ranks[population_index][sorted[selection_size-1]] == 0 )
     makeSelectionsForOnePopulationUsingDiversityOnRank0( population_index );
   else
   {
+
     for( i = 0; i < selection_size; i++ )
     {
-      for( j = 0; j < number_of_parameters; j++ )
+      for( j = 0; j < number_of_parameters; j++ ) {
         selections[population_index][i][j] = populations[population_index][sorted[i]][j];
 
+      }
       objective_values_selections[population_index][i]  = objective_values[population_index][sorted[i]];
       constraint_values_selections[population_index][i] = constraint_values[population_index][sorted[i]];
     }
+
   }
 
   free( sorted );
@@ -2772,13 +2786,14 @@ void copyBestSolutionsToPopulations( void )
 {
   int i, k;
 
-  for( i = 0; i < number_of_populations; i++ )
+  for( i = 1; i < number_of_populations; i++ )
   {
     if( !populations_terminated[i] )
     {
-      for( k = 0; k < number_of_parameters; k++ )
+      for( k = 0; k < number_of_parameters; k++ ) {
         populations[i][0][k] = selections[i][0][k];
 
+      }
       objective_values[i][0]  = objective_values_selections[i][0];
       constraint_values[i][0] = constraint_values_selections[i][0];
     }
@@ -2869,6 +2884,9 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
 
     for (int f = 0; f < number_of_parameters; f++ ) {
       current_best[i + f] = populations[i][sorted[0]][f];
+      if(i + f == 0) {
+        //  printf("%lf\n", current_best[i + f]);
+      }
     }
 
     free( sorted );
@@ -3272,7 +3290,7 @@ void run( void )
    // Edited: Print current best at the end of process to check whether we did indeed find the best values
    for (int i = 0; i < total_amount_of_parameters; i++) {
      printf("(%lf) ^ 2 + \n",current_best[i]);
- }
+   }
 }
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
