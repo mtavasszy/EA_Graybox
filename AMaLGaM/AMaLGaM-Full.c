@@ -50,6 +50,7 @@
 #include <math.h>
 #include <stdio.h>
 #include <time.h>
+#include <assert.h>
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
 
@@ -134,12 +135,16 @@ double michalewiczFunctionUpperRangeBound( int dimension );
 void rastriginFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
 double rastriginFunctionLowerRangeBound( int dimension );
 double rastriginFunctionUpperRangeBound( int dimension );
+void sumOfRotatedEllipsoidBlocksFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
+double sumOfRotatedEllipsoidBlocksFunctionLowerRangeBound( int dimension );
+double sumOfRotatedEllipsoidBlocksFunctionUpperRangeBound( int dimension );
 void initialize( void );
 void initializeMemory( void );
 void initializeRandomNumberGenerator( void );
 void initializeParameterRangeBounds( void );
 void initializeDistributionMultipliers( void );
 void initializePopulationsAndFitnessValues( void );
+void initializeRotationMatrix( int block_size, double rotation_angle );
 void initializeObjectiveRotationMatrix( void );
 void computeRanks( void );
 void computeRanksForOnePopulation( int population_index );
@@ -1254,6 +1259,7 @@ char *installedProblemName( int index )
     case 10: return( (char *) "Griewank" );
     case 11: return( (char *) "Michalewicz" );
     case 12: return( (char *) "Rastrigin" );
+    case 13: return( (char *) "Sum of rotated ellipsoid blocks" );
   }
 
   return( NULL );
@@ -1296,6 +1302,7 @@ double installedProblemLowerRangeBound( int index, int dimension )
     case 10: return( griewankFunctionLowerRangeBound( dimension ) );
     case 11: return( michalewiczFunctionLowerRangeBound( dimension ) );
     case 12: return( rastriginFunctionLowerRangeBound( dimension ) );
+    case 13: return( sumOfRotatedEllipsoidBlocksFunctionLowerRangeBound( dimension ) );
   }
 
   return( 0.0 );
@@ -1321,6 +1328,7 @@ double installedProblemUpperRangeBound( int index, int dimension )
     case 10: return( griewankFunctionUpperRangeBound( dimension ) );
     case 11: return( michalewiczFunctionUpperRangeBound( dimension ) );
     case 12: return( rastriginFunctionUpperRangeBound( dimension ) );
+    case 13: return( sumOfRotatedEllipsoidBlocksFunctionUpperRangeBound( dimension ) );
   }
 
   return( 0.0 );
@@ -1730,6 +1738,42 @@ double rastriginFunctionUpperRangeBound( int dimension )
 {
   return( 1e+308 );
 }
+
+void sumOfRotatedEllipsoidBlocksFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value )
+{
+	const double rotation_angle = 45.0; // 0 for no dependencies within a block; 45 for maximal dependencies in a block
+	const int block_size = 5; // Number of dependent variables in a block
+	const double cond_factor = 6.0; // Conditioning factor (>0) determines conditioning number of rotated ellipsoid; higher is more difficult to solve
+
+	int    i, j;
+    double result, *rotated_parameters;
+
+	if( rotation_matrix == NULL )
+		initializeRotationMatrix( block_size, rotation_angle );
+	assert( number_of_parameters % block_size == 0 );
+
+	result = 0.0;
+    for( i = 0; i < number_of_parameters; i+=block_size )
+    {
+		rotated_parameters = matrixVectorMultiplication( rotation_matrix, &parameters[i], block_size, block_size );
+		for( j = 0; j < block_size; j++ )
+	        result += pow( 10.0, cond_factor*(((double) (j))/((double) (block_size-1))) )*rotated_parameters[j]*rotated_parameters[j];
+		free( rotated_parameters );
+    }
+
+    *objective_value  = result;
+    *constraint_value = 0;
+}
+
+double sumOfRotatedEllipsoidBlocksFunctionLowerRangeBound( int dimension )
+{
+    return( -1e+308 );
+}
+
+double sumOfRotatedEllipsoidBlocksFunctionUpperRangeBound( int dimension )
+{
+    return( 1e+308 );
+}
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
 
@@ -1921,6 +1965,66 @@ void initializePopulationsAndFitnessValues( void )
 
   }
 }
+
+void initializeRotationMatrix( int block_size, double rotation_angle )
+{
+  int      i, j, index0, index1;
+  double **matrix, **product, theta, cos_theta, sin_theta;
+
+  if( rotation_angle == 0.0 )
+    return;
+
+  matrix = (double **) Malloc( block_size*sizeof( double * ) );
+  for( i = 0; i < block_size; i++ )
+    matrix[i] = (double *) Malloc( block_size*sizeof( double ) );
+
+  rotation_matrix = (double **) Malloc( block_size*sizeof( double * ) );
+  for( i = 0; i < block_size; i++ )
+    rotation_matrix[i] = (double *) Malloc( block_size*sizeof( double ) );
+
+  /* Initialize the rotation matrix to the identity matrix */
+  for( i = 0; i < block_size; i++ )
+  {
+    for( j = 0; j < block_size; j++ )
+      rotation_matrix[i][j] = 0.0;
+    rotation_matrix[i][i] = 1.0;
+  }
+
+  /* Construct all rotation matrices (quadratic number) and multiply */
+  theta     = (rotation_angle/180.0)*PI;
+  cos_theta = cos( theta );
+  sin_theta = sin( theta );
+  for( index0 = 0; index0 < block_size-1; index0++ )
+  {
+    for( index1 = index0+1; index1 < block_size; index1++ )
+    {
+      for( i = 0; i < block_size; i++ )
+      {
+        for( j = 0; j < block_size; j++ )
+          matrix[i][j] = 0.0;
+        matrix[i][i] = 1.0;
+      }
+      matrix[index0][index0] = cos_theta;
+      matrix[index0][index1] = -sin_theta;
+      matrix[index1][index0] = sin_theta;
+      matrix[index1][index1] = cos_theta;
+
+      product = matrixMatrixMultiplication( matrix, rotation_matrix, block_size, block_size, block_size );
+      for( i = 0; i < block_size; i++ )
+        for( j = 0; j < block_size; j++ )
+          rotation_matrix[i][j] = product[i][j];
+
+      for( i = 0; i < block_size; i++ )
+        free( product[i] );
+      free( product );
+    }
+  }
+
+  for( i = 0; i < block_size; i++ )
+    free( matrix[i] );
+  free( matrix );
+}
+
 
 /**
  * Computes the rotation matrix to be applied to any solution
