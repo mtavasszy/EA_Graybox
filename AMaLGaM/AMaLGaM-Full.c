@@ -1572,24 +1572,25 @@ void rosenbrockFunctionProblemEvaluation( double *parameters, int population_ind
   int    i;
   double result;
 
+  double *values = (double *) Malloc( total_amount_of_parameters*sizeof( double ) );
+
+  for (int g = 0; g < total_amount_of_parameters; g++ ) {
+    values[g] = current_best[g];
+  }
+
+  for (int k = 0; k < number_of_parameters; k++ ) {
+    values[k + population_index] = parameters[k];
+  }
+
   result = 0.0;
-  for( i = 0; i < total_amount_of_parameters-1; i++ )
+  for( i = 0; i < total_amount_of_parameters-1; i++ ) {
+      result += 100*(values[i+1]-values[i]*values[i])*(values[i+1]-values[i]*values[i]) + (1.0-values[i])*(1.0-values[i]);
+  }
 
-    // If we have the parameters in the current population
-    // Overwrite them to come to a solution.
-    if (i <= population_index && population_index < i + number_of_parameters) {
-      int next = i+1 - population_index;
-      int current = i - population_index;
-
-      result += 100*(parameters[next]-parameters[current]*parameters[current])
-                  * (parameters[next]-parameters[current]*parameters[current])
-                    + (1.0-parameters[current])*(1.0-parameters[current]);
-    } else {
-      // If we do not have the paremeters, use the current_best
-      result += 100*(current_best[i+1]-current_best[i]*current_best[i])*(current_best[i+1]-current_best[i]*current_best[i]) + (1.0-current_best[i])*(1.0-current_best[i]);
-    }
   *objective_value  = result;
   *constraint_value = 0;
+
+  free(values);
 }
 
 double rosenbrockFunctionLowerRangeBound( int dimension )
@@ -2786,7 +2787,7 @@ void copyBestSolutionsToPopulations( void )
 {
   int i, k;
 
-  for( i = 1; i < number_of_populations; i++ )
+  for( i = 0; i < number_of_populations; i++ )
   {
     if( !populations_terminated[i] )
     {
