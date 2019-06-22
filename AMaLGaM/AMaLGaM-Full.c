@@ -1416,8 +1416,8 @@ void sphereFunctionProblemEvaluation( double *parameters, int population_index, 
   result += (parameters[0] * parameters[0]) - (current_best[population_index] * current_best[population_index]);
   // printf("\ncurrent opt: %lf\n", current_opt);
   // printf("Current best: %lf\n", current_best[population_index]);
-  printf("Paramater: %lf\n", parameters[0]);
-  printf("result: %lf\n\n", result);
+  // printf("Paramater: %lf\n", parameters[0]);
+  // printf("result: %lf\n\n", result);
 
   for (int i = 0; i < total_amount_of_parameters; i++) {
     printf("(%lf) ^ 2 + ",current_best[i]);
@@ -1587,25 +1587,39 @@ void rosenbrockFunctionProblemEvaluation( double *parameters, int population_ind
   int    i;
   double result;
 
-  double *values = (double *) Malloc( total_amount_of_parameters*sizeof( double ) );
+  result = current_opt;
 
-  for (int g = 0; g < total_amount_of_parameters; g++ ) {
-    values[g] = current_best[g];
+
+  printf("Paramater: %lf at %d\n", parameters[0], population_index);
+
+  for (int i = 0; i < total_amount_of_parameters; i++) {
+    printf("%lf, ",current_best[i]);
   }
 
-  for (int k = 0; k < number_of_parameters; k++ ) {
-    values[k + population_index] = parameters[k];
+
+  if (population_index != 0) {
+    double x_previous = current_best[population_index - 1];
+    double x_old = current_best[population_index];
+    double new_value = 100*(parameters[0]-x_previous*x_previous)*(parameters[0]-x_previous*x_previous) + (1.0-x_previous)*(1.0-x_previous);
+    double old_value = 100*(x_old-x_previous*x_previous)*(x_old-x_previous*x_previous) + (1.0-x_previous)*(1.0-x_previous);
+
+    result += new_value - old_value;
   }
 
-  result = 0.0;
-  for( i = 0; i < total_amount_of_parameters-1; i++ ) {
-      result += 100*(values[i+1]-values[i]*values[i])*(values[i+1]-values[i]*values[i]) + (1.0-values[i])*(1.0-values[i]);
+  if (population_index != total_amount_of_parameters )  {
+    double x_next = current_best[population_index + 1];
+    double x_old = current_best[population_index];
+    double new_value = 100*(x_next-parameters[0]*parameters[0])*(x_next-parameters[0]*parameters[0]) + (1.0-parameters[0])*(1.0-parameters[0]);
+    double old_value = 100*(x_next-x_old*x_old)*(x_next-x_old*x_old) + (1.0-x_old)*(1.0-x_old);
+
+    result += new_value - old_value;
   }
 
   *objective_value  = result;
   *constraint_value = 0;
 
-  free(values);
+  printf("obj value: %lf\n\n", *objective_value);
+
 }
 
 double rosenbrockFunctionLowerRangeBound( int dimension )
@@ -1944,6 +1958,14 @@ void initializeDistributionMultipliers( void )
   distribution_multiplier_increase = 1.0/distribution_multiplier_decrease;
 }
 
+void set_base_fitness() {
+    switch( problem_index )
+    {
+      case  7: current_opt = 9;
+      default: current_opt = 0;
+    }
+}
+
 /**
  * Initializes the populations and the fitness values.
  */
@@ -1952,6 +1974,8 @@ void initializePopulationsAndFitnessValues( void )
   int     i, j, k, o, q, *sorted, ssize, j_min, *temporary_population_sizes;
   double *distances, d, d_min, **solutions, *fitnesses, *constraints, **leader_vectors;
 
+  set_base_fitness();
+  
   for( i = 0; i < number_of_populations; i++ )
   {
     for( j = 0; j < population_size; j++ )
@@ -3016,7 +3040,7 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
 
 
     for (int i = 0; i < total_amount_of_parameters; i++) {
-      printf("(%lf) ^ 2 + \n",current_best[i]);
+      printf("%lf, \n",current_best[i]);
     }
 
 
