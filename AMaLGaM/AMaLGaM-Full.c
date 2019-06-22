@@ -1414,10 +1414,6 @@ void sphereFunctionProblemEvaluation( double *parameters, int population_index, 
 
   // Use own parameters for the related values
   result += (parameters[0] * parameters[0]) - (current_best[population_index] * current_best[population_index]);
-  // printf("\ncurrent opt: %lf\n", current_opt);
-  // printf("Current best: %lf\n", current_best[population_index]);
-  // printf("Paramater: %lf\n", parameters[0]);
-  // printf("result: %lf\n\n", result);
 
   for (int i = 0; i < total_amount_of_parameters; i++) {
     printf("(%lf) ^ 2 + ",current_best[i]);
@@ -1589,14 +1585,6 @@ void rosenbrockFunctionProblemEvaluation( double *parameters, int population_ind
 
   result = current_opt;
 
-
-  printf("Paramater: %lf at %d\n", parameters[0], population_index);
-
-  for (int i = 0; i < total_amount_of_parameters; i++) {
-    printf("%lf, ",current_best[i]);
-  }
-
-
   if (population_index != 0) {
     double x_previous = current_best[population_index - 1];
     double x_old = current_best[population_index];
@@ -1617,9 +1605,6 @@ void rosenbrockFunctionProblemEvaluation( double *parameters, int population_ind
 
   *objective_value  = result;
   *constraint_value = 0;
-
-  printf("obj value: %lf\n\n", *objective_value);
-
 }
 
 double rosenbrockFunctionLowerRangeBound( int dimension )
@@ -1961,8 +1946,9 @@ void initializeDistributionMultipliers( void )
 void set_base_fitness() {
     switch( problem_index )
     {
-      case  7: current_opt = 9;
-      default: current_opt = 0;
+      case  7: {
+        current_opt = total_amount_of_parameters - 1; break;
+      }
     }
 }
 
@@ -1975,7 +1961,7 @@ void initializePopulationsAndFitnessValues( void )
   double *distances, d, d_min, **solutions, *fitnesses, *constraints, **leader_vectors;
 
   set_base_fitness();
-  
+
   for( i = 0; i < number_of_populations; i++ )
   {
     for( j = 0; j < population_size; j++ )
@@ -3034,24 +3020,6 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
     }
     // Edited: Update global current_best array for any values found.
 
-
-
-
-
-
-    for (int i = 0; i < total_amount_of_parameters; i++) {
-      printf("%lf, \n",current_best[i]);
-    }
-
-
-      for(int z = 0; z < population_size; z++){
-        printf("Objective valuess list: %lf at %d\n", objective_values[i][sorted[z]], sorted[z]);
-      }
-
-
-     printf("objc opt: %lf\n", objective_values[i][sorted[1]]);
-     printf("current opt: %lf\n\n", current_opt);
-
     free( sorted );
 
   }
@@ -3452,8 +3420,9 @@ void run( void )
    ezilaitini();
 
    // Edited: Print current best at the end of process to check whether we did indeed find the best values
+   printf("Final results: (Debug purposes)");
    for (int i = 0; i < total_amount_of_parameters; i++) {
-     printf("(%lf) ^ 2 + \n",current_best[i]);
+     printf("%lf,  \n",current_best[i]);
    }
 }
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
