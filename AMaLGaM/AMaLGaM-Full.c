@@ -243,7 +243,9 @@ int64_t    random_seed,                      /* The seed used for the random-num
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 // Edited: Add new global variables
 double    *current_best;                          /* Keep track of current best value for every population. */
+double    current_opt = 0;
 int       total_amount_of_parameters;        /* Total length of function parameters to be evaluated, this is longer than amount_of_parameters */
+int       block_size;
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
 
@@ -1408,18 +1410,23 @@ void sphereFunctionProblemEvaluation( double *parameters, int population_index, 
   int    i;
   double result;
 
-  result = 0.0;
-  for( i = 0; i < total_amount_of_parameters; i++ ) {
-    // Use own parameters for the related values
-    if (i <= population_index && population_index < i + number_of_parameters) {
-      result += parameters[i - population_index] * parameters[i - population_index]; // Edited: Problem has been changed to only check parameter of current population
-    } else {
-      // If we do not have a value of a needed parameter, use the global current_best value.
-      result += current_best[i] * current_best[i]; // TODO: Don't recalculate entire result array
-    }
+  result = current_opt;
+
+  // Use own parameters for the related values
+  result += (parameters[0] * parameters[0]) - (current_best[population_index] * current_best[population_index]);
+  // printf("\ncurrent opt: %lf\n", current_opt);
+  // printf("Current best: %lf\n", current_best[population_index]);
+  printf("Paramater: %lf\n", parameters[0]);
+  printf("result: %lf\n\n", result);
+
+  for (int i = 0; i < total_amount_of_parameters; i++) {
+    printf("(%lf) ^ 2 + ",current_best[i]);
   }
+
   *objective_value  = result;
   *constraint_value = 0;
+
+  printf("obj value: %lf\n\n", *objective_value);
 }
 
 double sphereFunctionProblemLowerRangeBound( int dimension )
@@ -1831,6 +1838,10 @@ void initializeMemory( void )
   cholesky_factors_lower_triangle  = (double ***) Malloc( number_of_populations*sizeof( double ** ) );
   current_best                     = (double *) Malloc( total_amount_of_parameters*sizeof( double ) ); // Edited: Malloc current best
 
+  for( i = 0; i < number_of_populations; i++) {
+    current_best[i] = 0;
+  }
+
   for( i = 0; i < number_of_populations; i++ )
   {
     populations[i] = (double **) Malloc( population_size*sizeof( double * ) );
@@ -1953,13 +1964,15 @@ void initializePopulationsAndFitnessValues( void )
       installedProblemEvaluation( problem_index, i, populations[i][j], &(objective_values[i][j]), &(constraint_values[i][j]) );
     }
 
-    // Edited: find current best value of population
+    //Edited: find current best value of population
     sorted = mergeSortFitness( objective_values[i], constraint_values[i], population_size );
 
     // Edited: Update global current_best array for any values found.
     for (int f = 0; f < number_of_parameters; f++ ) {
-      current_best[i + f] = populations[i][sorted[0]][f];
+      current_best[i + f] = populations[i][sorted[1]][f];
     }
+
+    current_opt = objective_values[i][sorted[1]];
 
     free( sorted );
 
@@ -2985,16 +2998,38 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
       }
     }
 
-    sorted = mergeSortFitness( objective_values[i], constraint_values[i], population_size ); // Edited find current best value of population and update global array
+    //Edited: find current best value of population
+    sorted = mergeSortFitness( objective_values[i], constraint_values[i], population_size );
 
-    for (int f = 0; f < number_of_parameters; f++ ) {
-      current_best[i + f] = populations[i][sorted[0]][f];
-      if(i + f == 0) {
-        //  printf("%lf\n", current_best[i + f]);
+    if (current_opt > objective_values[i][sorted[1]]) {
+      for (int f = 0; f < number_of_parameters; f++ ) {
+        current_best[i + f] = populations[i][sorted[1]][f];
       }
+
+      current_opt = objective_values[i][sorted[1]];
+    }
+    // Edited: Update global current_best array for any values found.
+
+
+
+
+
+
+    for (int i = 0; i < total_amount_of_parameters; i++) {
+      printf("(%lf) ^ 2 + \n",current_best[i]);
     }
 
+
+      for(int z = 0; z < population_size; z++){
+        printf("Objective valuess list: %lf at %d\n", objective_values[i][sorted[z]], sorted[z]);
+      }
+
+
+     printf("objc opt: %lf\n", objective_values[i][sorted[1]]);
+     printf("current opt: %lf\n\n", current_opt);
+
     free( sorted );
+
   }
 
   free( solution_AMS );
