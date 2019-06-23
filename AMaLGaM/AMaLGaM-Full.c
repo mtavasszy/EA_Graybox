@@ -135,7 +135,7 @@ double michalewiczFunctionUpperRangeBound( int dimension );
 void rastriginFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
 double rastriginFunctionLowerRangeBound( int dimension );
 double rastriginFunctionUpperRangeBound( int dimension );
-void sumOfRotatedEllipsoidBlocksFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value );
+void sumOfRotatedEllipsoidBlocksFunctionProblemEvaluation( double *parameters, int population_index, double *objective_value, double *constraint_value );
 double sumOfRotatedEllipsoidBlocksFunctionLowerRangeBound( int dimension );
 double sumOfRotatedEllipsoidBlocksFunctionUpperRangeBound( int dimension );
 void initialize( void );
@@ -890,7 +890,7 @@ void interpretCommandLine( int argc, char **argv )
   if( use_guidelines )
   {
     tau                              = 0.35;
-    population_size                  = (int) (17.0 + 3.0*pow((double) number_of_parameters,1.5));
+  //  population_size                  = (int) (17.0 + 3.0*pow((double) number_of_parameters,1.5));
     distribution_multiplier_decrease = 0.9;
     st_dev_ratio_threshold           = 1.0;
     maximum_no_improvement_stretch   = 25 + number_of_parameters;
@@ -1400,6 +1400,7 @@ void installedProblemEvaluationWithoutRotation( int index, int population_index,
     case 10: griewankFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
     case 11: michalewiczFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
     case 12: rastriginFunctionProblemEvaluation( parameters, objective_value, constraint_value ); break;
+    case 13: sumOfRotatedEllipsoidBlocksFunctionProblemEvaluation(parameters, population_index, objective_value, constraint_value); break;
   }
 }
 
@@ -1739,25 +1740,42 @@ double rastriginFunctionUpperRangeBound( int dimension )
   return( 1e+308 );
 }
 
-void sumOfRotatedEllipsoidBlocksFunctionProblemEvaluation( double *parameters, double *objective_value, double *constraint_value )
+void sumOfRotatedEllipsoidBlocksFunctionProblemEvaluation( double *parameters, int population_index, double *objective_value, double *constraint_value )
 {
 	const double rotation_angle = 45.0; // 0 for no dependencies within a block; 45 for maximal dependencies in a block
 	const int block_size = 5; // Number of dependent variables in a block
 	const double cond_factor = 6.0; // Conditioning factor (>0) determines conditioning number of rotated ellipsoid; higher is more difficult to solve
 
 	int    i, j;
-    double result, *rotated_parameters;
+  double result, *rotated_parameters;
+
+  // printf("\n\n1 iteration:");
+  // for (int i = 0; i < total_amount_of_parameters; i++) {
+  //   printf("(%lf), \n",current_best[i]);
+  // }
+
+  double *values = (double *) Malloc( total_amount_of_parameters*sizeof( double ) );
+
+  for (int g = 0; g < total_amount_of_parameters; g++ ) {
+    values[g] = current_best[g];
+  }
+
+  for (int k = 0; k < number_of_parameters; k++ ) {
+    values[k + (population_index * block_size)] = parameters[k];
+  }
+
 
 	if( rotation_matrix == NULL )
 		initializeRotationMatrix( block_size, rotation_angle );
-	assert( number_of_parameters % block_size == 0 );
+	assert( total_amount_of_parameters % block_size == 0 );
 
 	result = 0.0;
-    for( i = 0; i < number_of_parameters; i+=block_size )
+    for( i = 0; i < total_amount_of_parameters; i += block_size )
     {
-		rotated_parameters = matrixVectorMultiplication( rotation_matrix, &parameters[i], block_size, block_size );
-		for( j = 0; j < block_size; j++ )
+		rotated_parameters = matrixVectorMultiplication( rotation_matrix, &values[i], block_size, block_size );
+		for( j = 0; j < block_size; j++ ) {
 	        result += pow( 10.0, cond_factor*(((double) (j))/((double) (block_size-1))) )*rotated_parameters[j]*rotated_parameters[j];
+    }
 		free( rotated_parameters );
     }
 
@@ -1830,6 +1848,10 @@ void initializeMemory( void )
   covariance_matrices              = (double ***) Malloc( number_of_populations*sizeof( double ** ) );
   cholesky_factors_lower_triangle  = (double ***) Malloc( number_of_populations*sizeof( double ** ) );
   current_best                     = (double *) Malloc( total_amount_of_parameters*sizeof( double ) ); // Edited: Malloc current best
+
+  for (i = 0; i < total_amount_of_parameters; i++) {
+    current_best[i] = 0;
+  }
 
   for( i = 0; i < number_of_populations; i++ )
   {
@@ -1958,7 +1980,7 @@ void initializePopulationsAndFitnessValues( void )
 
     // Edited: Update global current_best array for any values found.
     for (int f = 0; f < number_of_parameters; f++ ) {
-      current_best[i + f] = populations[i][sorted[0]][f];
+      current_best[(i * number_of_parameters) + f] = populations[i][sorted[0]][f];
     }
 
     free( sorted );
@@ -2988,9 +3010,9 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
     sorted = mergeSortFitness( objective_values[i], constraint_values[i], population_size ); // Edited find current best value of population and update global array
 
     for (int f = 0; f < number_of_parameters; f++ ) {
-      current_best[i + f] = populations[i][sorted[0]][f];
+      current_best[(i * number_of_parameters) + f] = populations[i][sorted[0]][f];
       if(i + f == 0) {
-        //  printf("%lf\n", current_best[i + f]);
+        //  printf("%lf\n", current_best[(i * number_of_parameters) + f]);
       }
     }
 
@@ -3394,7 +3416,7 @@ void run( void )
 
    // Edited: Print current best at the end of process to check whether we did indeed find the best values
    for (int i = 0; i < total_amount_of_parameters; i++) {
-     printf("(%lf) ^ 2 + \n",current_best[i]);
+     printf("(%lf), \n",current_best[i]);
    }
 }
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
