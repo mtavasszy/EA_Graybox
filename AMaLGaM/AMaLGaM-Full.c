@@ -892,7 +892,7 @@ void interpretCommandLine( int argc, char **argv )
   if( use_guidelines )
   {
     tau                              = 0.35;
-    population_size                  = (int) (17.0 + 3.0*pow((double) number_of_parameters,1.5));
+    //population_size                  = (int) (17.0 + 3.0*pow((double) number_of_parameters,1.5));
     distribution_multiplier_decrease = 0.9;
     st_dev_ratio_threshold           = 1.0;
     maximum_no_improvement_stretch   = 25 + number_of_parameters;
@@ -1415,14 +1415,8 @@ void sphereFunctionProblemEvaluation( double *parameters, int population_index, 
   // Use own parameters for the related values
   result += (parameters[0] * parameters[0]) - (current_best[population_index] * current_best[population_index]);
 
-  for (int i = 0; i < total_amount_of_parameters; i++) {
-    printf("(%lf) ^ 2 + ",current_best[i]);
-  }
-
   *objective_value  = result;
   *constraint_value = 0;
-
-  printf("obj value: %lf\n\n", *objective_value);
 }
 
 double sphereFunctionProblemLowerRangeBound( int dimension )
