@@ -1767,23 +1767,24 @@ void sumOfRotatedEllipsoidBlocksFunctionProblemEvaluation( double *parameters, i
 
   result = current_opt;
 
-  printf("Current Opt Result: %lf\n", current_opt);
-
-  printf("Final results: (Debug purposes)\n");
-  for (int i = 0; i < block_size; i++) {
-    printf("old values: %lf,  \n", current_best[(population_index * block_size) + i]);
-    printf("new values: %lf,  \n", parameters[i]);
-  }
+  // printf("Current Opt Result: %lf\n", current_opt);
+  //
+  // printf("Final results: (Debug purposes)\n");
+  // for (int i = 0; i < block_size; i++) {
+  //   printf("old values: %lf,  \n", current_best[(population_index * block_size) + i]);
+  //   printf("new values: %lf,  \n", parameters[i]);
+  // }
 
   double old_value = sumOfRotatedEllipsoidCalculateResult(&current_best[population_index * block_size], block_size, cond_factor);
   double new_value = sumOfRotatedEllipsoidCalculateResult(parameters, block_size, cond_factor);
 
-  printf("old: %lf\n", old_value);
-  printf("new: %lf\n", new_value);
+  // printf("old: %lf\n", old_value);
+  // printf("new: %lf\n", new_value);
 
   result += new_value - old_value;
 
-  printf("New Result: %lf\n", result);
+  // printf("New Result: %lf\n", result);
+  // printf("Current Opt: %lf\n", current_opt);
 
 
   *objective_value  = result;
@@ -2987,7 +2988,7 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
       samples_drawn_from_normal[i] = 0;
       out_of_bounds_draws[i]       = 0;
       q                            = 0;
-      for( j = 1; j < population_size; j++ )
+      for( j = 0; j < population_size; j++ )
       {
         solution = generateNewSolution( i );
 
@@ -3032,10 +3033,10 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
 
     if (current_opt > objective_values[i][sorted[1]]) {
       for (int f = 0; f < number_of_parameters; f++ ) {
-        current_best[(i * number_of_parameters) + f] = populations[i][sorted[1]][f];
+        current_best[(i * number_of_parameters) + f] = populations[i][sorted[0]][f];
       }
 
-      current_opt = objective_values[i][sorted[1]];
+      current_opt = objective_values[i][sorted[0]];
     }
     // Edited: Update global current_best array for any values found.
 
