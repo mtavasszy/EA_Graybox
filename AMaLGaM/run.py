@@ -50,22 +50,24 @@ def create_commands_rec(base_command, params, param_order):
     return full_commands
 
 
+# a.exe -v -g 7 1 -100 100 0 0 0 10 0 0 1000000 -2 0 0.5 10
 cmd = "a.exe"
 flags = ["-g", "-v", "-s", "-w"]
 pro = [1, 2, 7]
-dim = [2, 3]
-low = [-50]
-upp = [50]
+dim = [1]
+low = [-100]
+upp = [100]
 rot = [0]
-tau = [1]  # Re-written by -g
-pop = [10, 100]  # Re-written by -g
+tau = [0]  # Re-written by -g
+pop = [5, 10, 30]  # Re-written by -g
 nop = [1]
-srt = [1]  # Re-written by -g
 dmd = [1]  # Re-written by -g
-eva = [1000, 2000]
-vtr = [0]
-imp = [1]  # Re-written by -g
-tol = [0.1]
+srt = [0]  # Re-written by -g
+eva = [1000000]
+vtr = [-2]
+imp = [0]  # Re-written by -g
+tol = [0.5]
+psz = [30]
 
 # How many times to run each experiment
 n_runs = 2
@@ -76,14 +78,13 @@ params = {"pro": pro, "dim": dim, "low": low,
           "nop": nop, "dmd": dmd,
           "srt": srt, "eva": eva,
           "vtr": vtr, "imp": imp,
-          "tol": tol}
+          "tol": tol, "psz": psz}
 
 param_order = ["pro", "dim", "low", "upp", "rot", "tau", "pop",
-               "nop", "dmd", "srt", "eva", "vtr", "imp", "tol"]
+               "nop", "dmd", "srt", "eva", "vtr", "imp", "tol", "psz"]
 
 commands = create_commands(cmd, flags, params, param_order)
 ncommands = len(commands)
-print(commands)
 
 print("The EA is going to be ran {} times.".format(str(ncommands)))
 
@@ -110,5 +111,5 @@ for i in range(len(commands)):
         for file in files_to_move:
             shutil.move(file, results_path)
 
-    percent_done = "%.2f" % (i/ncommands * 100)
+    percent_done = "%.2f" % ((i + 1)/ncommands * 100)
     print("Run #{} finished, {}% done.".format(str(i), percent_done))
