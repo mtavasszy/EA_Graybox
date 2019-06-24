@@ -2294,7 +2294,7 @@ void writeGenerationalStatistics( void )
   file = NULL;
   if( number_of_generations == 0 )
   {
-    file = fopen( "statistics.dat", "w" );
+    file = fopen( "data/statistics.dat", "w" );
 
     sprintf( string, "# Generation Evaluations  Average-obj. Variance-obj.     Best-obj.    Worst-obj.  Average-con. Variance-con.     Best-con.    Worst-con.   [ ");
     fputs( string, file );
@@ -2313,7 +2313,7 @@ void writeGenerationalStatistics( void )
     fputs( string, file );
   }
   else
-    file = fopen( "statistics.dat", "a" );
+    file = fopen( "data/statistics.dat", "a" );
 
   sprintf( string, "  %10d %11d %13e %13e %13e %13e %13e %13e %13e %13e   [ ", number_of_generations, number_of_evaluations, overall_objective_avg, overall_objective_var, overall_objective_best, overall_objective_worst, overall_constraint_avg, overall_constraint_var, overall_constraint_best, overall_constraint_worst );
   fputs( string, file );
@@ -2360,22 +2360,22 @@ void writeGenerationalSolutions( short final )
   FILE *file_all, *file_population, *file_selection;
 
   if( final )
-    sprintf( string, "all_populations_generation_final.dat" );
+    sprintf( string, "data/all_populations_generation_final.dat" );
   else
-    sprintf( string, "all_populations_generation_%05d.dat", number_of_generations );
+    sprintf( string, "data/all_populations_generation_%05d.dat", number_of_generations );
   file_all = fopen( string, "w" );
 
   for( i = 0; i < number_of_populations; i++ )
   {
     if( final )
-      sprintf( string, "population_%05d_generation_final.dat", i );
+      sprintf( string, "data/population_%05d_generation_final.dat", i );
     else
-      sprintf( string, "population_%05d_generation_%05d.dat", i, number_of_generations );
+      sprintf( string, "data/population_%05d_generation_%05d.dat", i, number_of_generations );
     file_population = fopen( string, "w" );
 
     if( number_of_generations > 0 && !final )
     {
-      sprintf( string, "selection_%05d_generation_%05d.dat", i, number_of_generations-1 );
+      sprintf( string, "data/selection_%05d_generation_%05d.dat", i, number_of_generations-1 );
       file_selection = fopen( string, "w" );
     }
 
@@ -2462,9 +2462,9 @@ void writeGenerationalSolutionsBest( short final )
 
   /* Then output it */
   if( final )
-    sprintf( string, "best_generation_final.dat" );
+    sprintf( string, "data/best_generation_final.dat" );
   else
-    sprintf( string, "best_generation_%05d.dat", number_of_generations );
+    sprintf( string, "data/best_generation_%05d.dat", number_of_generations );
   file = fopen( string, "w" );
 
   for( i = 0; i < number_of_parameters; i++ )
@@ -2501,13 +2501,17 @@ short checkTerminationCondition( void )
   short allTrue;
   int   i;
 
-  if( checkNumberOfEvaluationsTerminationCondition() )
-    return( 1 );
+  if (checkNumberOfEvaluationsTerminationCondition()) {
+	printf("max number of evaluations reached - terminating\n");
+	return( 1 );
+  }
 
   if( use_vtr )
   {
-    if( checkVTRTerminationCondition() )
-      return( 1 );
+	  if (checkVTRTerminationCondition()) {
+		  printf("VTR reached - terminating\n");
+		  return(1);
+	  }
   }
 
   checkFitnessVarianceTermination();
@@ -2522,6 +2526,10 @@ short checkTerminationCondition( void )
       allTrue = 0;
       break;
     }
+  }
+
+  if (allTrue) {
+	  printf("population variation lost - terminating\n");
   }
 
   return( allTrue );
