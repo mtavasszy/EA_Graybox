@@ -246,6 +246,7 @@ double    *current_best;                          /* Keep track of current best 
 double    current_opt = 0;
 int       total_amount_of_parameters;        /* Total length of function parameters to be evaluated, this is longer than amount_of_parameters */
 int       block_size;
+clock_t   time_taken;
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
 
@@ -895,7 +896,7 @@ void interpretCommandLine( int argc, char **argv )
     //population_size                  = (int) (17.0 + 3.0*pow((double) number_of_parameters,1.5));
     distribution_multiplier_decrease = 0.9;
     st_dev_ratio_threshold           = 1.0;
-    maximum_no_improvement_stretch   = 25 + number_of_parameters;
+    maximum_no_improvement_stretch   = 25 + total_amount_of_parameters;
   }
 
   checkOptions();
@@ -2322,8 +2323,11 @@ void writeGenerationalStatistics( void )
   {
     file = fopen( "data/statistics.dat", "w" );
 
+
+
     sprintf( string, "# Generation Evaluations  Average-obj. Variance-obj.     Best-obj.    Worst-obj.  Average-con. Variance-con.     Best-con.    Worst-con.   [ ");
     fputs( string, file );
+
 
     for( i = 0; i < number_of_populations; i++ )
     {
@@ -2341,6 +2345,9 @@ void writeGenerationalStatistics( void )
   else
     file = fopen( "data/statistics.dat", "a" );
 
+
+
+
   sprintf( string, "  %10d %11d %13e %13e %13e %13e %13e %13e %13e %13e   [ ", number_of_generations, number_of_evaluations, overall_objective_avg, overall_objective_var, overall_objective_best, overall_objective_worst, overall_constraint_avg, overall_constraint_var, overall_constraint_best, overall_constraint_worst );
   fputs( string, file );
 
@@ -2355,7 +2362,13 @@ void writeGenerationalStatistics( void )
     }
   }
   sprintf( string, " ]\n" );
+
   fputs( string, file );
+
+  sprintf(string, "time: %lf\n", ((double)time_taken)/CLOCKS_PER_SEC);
+  printf(string);
+  fputs( string, file );
+
 
   fclose( file );
 
@@ -2938,23 +2951,23 @@ void estimateCovarianceMatrixML( int population_index )
  * Copies the single very best of the selected solutions
  * to their respective populations.
  */
-void copyBestSolutionsToPopulations( void )
-{
-  int i, k;
+ void copyBestSolutionsToPopulations( void )
+ {
+   int i, k;
 
-  for( i = 0; i < number_of_populations; i++ )
-  {
-    if( !populations_terminated[i] )
-    {
-      for( k = 0; k < number_of_parameters; k++ ) {
-        populations[i][0][k] = selections[i][0][k];
+   for( i = 0; i < number_of_populations; i++ )
+   {
+     if( !populations_terminated[i] )
+     {
+       for( k = 0; k < number_of_parameters; k++ ) {
+         populations[i][0][k] = selections[i][0][k];
 
-      }
-      objective_values[i][0]  = objective_values_selections[i][0];
-      constraint_values[i][0] = constraint_values_selections[i][0];
-    }
-  }
-}
+       }
+       // Edited: Re-evaluate
+       installedProblemEvaluation( problem_index, i, populations[i][0], &(objective_values[i][0]), &(constraint_values[i][0]) );
+     }
+   }
+ }
 
 /**
  * Applies the distribution multipliers.
@@ -2996,7 +3009,7 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
       samples_drawn_from_normal[i] = 0;
       out_of_bounds_draws[i]       = 0;
       q                            = 0;
-      for( j = 0; j < population_size; j++ )
+      for( j = 1; j < population_size; j++ )
       {
         solution = generateNewSolution( i );
 
@@ -3039,7 +3052,7 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
     //Edited: find current best value of population
     sorted = mergeSortFitness( objective_values[i], constraint_values[i], population_size );
 
-    if (current_opt > objective_values[i][sorted[1]]) {
+    if (current_opt > objective_values[i][sorted[0]]) {
       for (int f = 0; f < number_of_parameters; f++ ) {
         current_best[(i * number_of_parameters) + f] = populations[i][sorted[0]][f];
       }
@@ -3420,6 +3433,8 @@ void ezilaitiniObjectiveRotationMatrix( void )
  */
 void run( void )
 {
+  time_t time = clock();
+
   initialize();
 
   if( print_verbose_overview )
@@ -3437,8 +3452,12 @@ void run( void )
 
     makePopulations();
 
+    time_taken = clock() - time;
+
     number_of_generations++;
   }
+
+  time_taken = clock() - time;
 
    writeGenerationalStatistics();
 
@@ -3447,10 +3466,10 @@ void run( void )
    ezilaitini();
 
 //   Edited: Print current best at the end of process to check whether we did indeed find the best values
-   printf("Final results: (Debug purposes)");
-   for (int i = 0; i < total_amount_of_parameters; i++) {
-     printf("%lf,  \n",current_best[i]);
-   }
+   // printf("Final results: (Debug purposes)");
+   // for (int i = 0; i < total_amount_of_parameters; i++) {
+   //   printf("%lf,  \n",current_best[i]);
+   // }
 }
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
