@@ -244,6 +244,7 @@ int64_t    random_seed,                      /* The seed used for the random-num
 // Edited: Add new global variables
 double    *current_best;                          /* Keep track of current best value for every population. */
 int       total_amount_of_parameters;        /* Total length of function parameters to be evaluated, this is longer than amount_of_parameters */
+time_t    time_taken;
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
 
@@ -2336,6 +2337,11 @@ void writeGenerationalStatistics( void )
   sprintf( string, " ]\n" );
   fputs( string, file );
 
+  sprintf(string, "time: %lf\n", ((double)time_taken)/CLOCKS_PER_SEC);
+  // printf(string);
+  fputs( string, file );
+
+
   fclose( file );
 
   free( population_objective_avg );
@@ -3386,27 +3392,33 @@ void ezilaitiniObjectiveRotationMatrix( void )
 /**
  * Runs the IDEA.
  */
-void run( void )
-{
-  initialize();
+ void run( void )
+ {
+   time_t time = clock();
 
-  if( print_verbose_overview )
-    printVerboseOverview();
+   initialize();
 
-  while( !checkTerminationCondition() )
-  {
-    if( write_generational_statistics )
-      writeGenerationalStatistics();
+   if( print_verbose_overview )
+     printVerboseOverview();
 
-    if( write_generational_solutions )
-      writeGenerationalSolutions( 0 );
+   while( !checkTerminationCondition() )
+   {
+     if( write_generational_statistics )
+       writeGenerationalStatistics();
 
-    makeSelections();
+     if( write_generational_solutions )
+       writeGenerationalSolutions( 0 );
 
-    makePopulations();
+     makeSelections();
 
-    number_of_generations++;
-  }
+     makePopulations();
+
+     time_taken = clock() - time;
+
+     number_of_generations++;
+   }
+
+   time_taken = clock() - time;
 
    writeGenerationalStatistics();
 
@@ -3415,9 +3427,9 @@ void run( void )
    ezilaitini();
 
    // Edited: Print current best at the end of process to check whether we did indeed find the best values
-   for (int i = 0; i < total_amount_of_parameters; i++) {
-     printf("(%lf), \n",current_best[i]);
-   }
+   // for (int i = 0; i < total_amount_of_parameters; i++) {
+   //   printf("(%lf), \n",current_best[i]);
+   // }
 }
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
