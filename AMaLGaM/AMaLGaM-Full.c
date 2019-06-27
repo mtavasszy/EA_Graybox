@@ -2000,10 +2000,10 @@ void initializePopulationsAndFitnessValues( void )
 
     // Edited: Update global current_best array for any values found.
     for (int f = 0; f < number_of_parameters; f++ ) {
-      current_best[(i * number_of_parameters) + f] = populations[i][sorted[1]][f];
+      current_best[(i * number_of_parameters) + f] = populations[i][sorted[0]][f];
     }
 
-    current_opt = objective_values[i][sorted[1]];
+    current_opt = objective_values[i][sorted[0]];
 
     free( sorted );
 
@@ -2366,7 +2366,7 @@ void writeGenerationalStatistics( void )
   fputs( string, file );
 
   sprintf(string, "time: %lf\n", ((double)time_taken)/CLOCKS_PER_SEC);
-  printf(string);
+  //printf(string);
   fputs( string, file );
 
 
@@ -3009,7 +3009,7 @@ void generateAndEvaluateNewSolutionsToFillPopulations( void )
       samples_drawn_from_normal[i] = 0;
       out_of_bounds_draws[i]       = 0;
       q                            = 0;
-      for( j = 1; j < population_size; j++ )
+      for( j = 0; j < population_size; j++ )
       {
         solution = generateNewSolution( i );
 

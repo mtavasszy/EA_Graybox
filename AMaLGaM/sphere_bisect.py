@@ -3,6 +3,8 @@ from os import listdir
 import shutil
 import copy
 import json
+import subprocess
+
 
 
 class Command:
@@ -65,7 +67,7 @@ if not os.path.exists("results"):
     os.mkdir("results")
 	
 with open("results.dat", "w") as file:
-	file.write("i Pop L\n")
+	file.write("i L Pop\n")
 	file.close()
 	
 prob_size = [5, 10, 20, 40, 80, 160, 320, 640, 1280, 2560, 5120, 10240, 20480, 40960, 81920, 163840, 327680, 655360, 1310720, 2621440, 5242880]
@@ -83,8 +85,8 @@ upp = [-100]
 rot = [0]
 tau = [0.35]  # Re-written by -g
 dmd = [1]  # Re-written by -g
-srt = [0]  # Re-written by -g
-eva = [10000000000]
+srt = [0.9]  # Re-written by -g
+eva = [100000000000]
 vtr = [0.0000000001]
 imp = [0]  # Re-written by -g
 tol = [0.0000000000000000000001]
@@ -108,18 +110,15 @@ for L in prob_size:
 
 		commands = create_commands(cmd, flags, params, param_order)
 		
-		os.popen(str(commands[0])).readlines()
-		
-		f = open("data/best_generation_final.dat", "r")
-		results = f.readline().split()
-		
-		if float(results[1]) < vtr[0]: # check log if VTR reached
+		output = os.popen(str(commands[0])).readlines()
+
+		if output[-1].rstrip() == "VTR reached - terminating":
 			VTR_n += 1
-			#print(str(i) + " - " + str(VTR_n) + "x VTR for pop size " + str(N))
+			print(str(i) + " - " + str(VTR_n) + "x VTR for pop size " + str(N))
 		else:
+			print(str(i) + " - " + "cant reach 10x VTR with pop size " + str(N) + ", doubling N")
 			VTR_n = 0
 			N = N * 2
-			print(str(i) + " - " + "cant reach 10x VTR with pop size " + str(N) + ", doubling N")
 		
 	VTR_n = 0
 
@@ -145,25 +144,25 @@ for L in prob_size:
 
 			commands = create_commands(cmd, flags, params, param_order)
 			
-			os.popen(str(commands[0])).readlines()
+			output = os.popen(str(commands[0])).readlines()
 			
-			f = open("data/best_generation_final.dat", "r")
-			results = f.readline().split()
-			
-			if float(results[1]) < vtr[0]: # check log if VTR reached
+			if output[-1].rstrip() == "VTR reached - terminating":
 				VTR_n += 1
-				#print(str(VTR_n) + "x VTR for pop size " + str(N))
+				print(str(VTR_n) + "x VTR for pop size " + str(N))
 			else:
 				print(str(i) + " - " + "failed with pop size " + str(N) + ", checking higher range")
 				VTR_n = 0
 				a = N
 				N = round((a+b) / 2)
+				if (abs(a-b) <= 1):
+					break
 				limit -= 1
 	
 		print(str(i) + " - " + "succeeded with pop size " + str(N) +", checking lower range")
 		VTR_n = 0
 		b = N
 		N = round((a+b) / 2)
+
 		limit -= 1
 		
 	if limit==0:
