@@ -3,6 +3,7 @@ from os import listdir
 import shutil
 import copy
 import json
+import time
 
 
 class Command:
@@ -50,66 +51,112 @@ def create_commands_rec(base_command, params, param_order):
     return full_commands
 
 
-# a.exe -v -g 7 1 -100 100 0 0 0 10 0 0 1000000 -2 0 0.5 10
-cmd = "a.exe"
-flags = ["-g", "-v", "-s", "-w"]
-pro = [1, 2, 7]
-dim = [1]
-low = [-100]
-upp = [100]
-rot = [0]
-tau = [0]  # Re-written by -g
-pop = [5, 10, 30]  # Re-written by -g
-nop = [1]
-dmd = [1]  # Re-written by -g
-srt = [0]  # Re-written by -g
-eva = [1000000]
-vtr = [-2]
-imp = [0]  # Re-written by -g
-tol = [0.5]
-psz = [30]
+dir = "./popPerSize/"
+for filename in os.listdir(dir):
+    pro = 0
+    pro = 13 if "Ellipsoid" in filename else pro
+    pro = 7 if "Rosenbrock" in filename else pro
+    pro = 0 if "Sphere" in filename else pro
 
-# How many times to run each experiment
-n_runs = 2
+    vtr = 0
+    vtr = 0.0000001 if "E-7" in filename else vtr
+    vtr = 0.0000000001 if "E-10" in filename else vtr
 
-params = {"pro": pro, "dim": dim, "low": low,
-          "upp": upp, "rot": rot,
-          "tau": tau, "pop": pop,
-          "nop": nop, "dmd": dmd,
-          "srt": srt, "eva": eva,
-          "vtr": vtr, "imp": imp,
-          "tol": tol, "psz": psz}
+    cmd = ""
+    cmd = "amalgam-grey.exe" if "Gray" in filename else cmd
+    cmd = "amalgam-black.exe" if "Black" in filename else cmd
 
-param_order = ["pro", "dim", "low", "upp", "rot", "tau", "pop",
-               "nop", "dmd", "srt", "eva", "vtr", "imp", "tol", "psz"]
+    with open(dir + filename) as f:
+        popPerSize = eval(f.readlines()[0])
 
-commands = create_commands(cmd, flags, params, param_order)
-ncommands = len(commands)
+    flags = ["-g", "-r"]
+    pro = [pro]
+    # dim = [1]
+    low = [-115]
+    upp = [100] if pro == [13] else [-100]
+    rot = [0]
+    tau = [0.35]  # Re-written by -g
+    # pop = [5, 10, 30]  # Re-written by -g
+    # nop = [1]
+    dmd = [1]  # Re-written by -g
+    srt = [0.9]  # Re-written by -g
+    eva = [100000000000]
+    vtr = [vtr]
+    imp = [0]  # Re-written by -g
+    tol = [1e-19]
+    # psz = [30]
 
-print("The EA is going to be ran {} times.".format(str(ncommands)))
+    for size in popPerSize.keys():
+        pop = [popPerSize[size]]
+        if "Gray" in filename:
+            psz = size
+            nop = int(size/5) if pro == [13] else size
+            dim = 5 if pro == [13] else 1
+            psz = [psz]
+        elif "Black" in filename:
+            dim = size
+            nop = 1
+        dim = [dim]
+        nop = [nop]
 
-# Clean-up previous attempts
-files_to_delete = datafiles(".")
-for file in files_to_delete:
-    os.remove(file)
+        # How many times to run each experiment
+        n_runs = 10
 
-if not os.path.exists("results"):
-    os.mkdir("results")
+        params = {"pro": pro, "dim": dim, "low": low,
+                  "upp": upp, "rot": rot,
+                  "tau": tau, "pop": pop,
+                  "nop": nop, "dmd": dmd,
+                  "srt": srt, "eva": eva,
+                  "vtr": vtr, "imp": imp,
+                  "tol": tol}
 
-for i in range(len(commands)):
-    for n in range(n_runs):
-        results_path = "results\\" + str(i) + "_" + str(n)
-        if not os.path.exists(results_path):
-            os.mkdir(results_path)
+        param_order = ["pro", "dim", "low", "upp", "rot", "tau", "pop",
+                       "nop", "dmd", "srt", "eva", "vtr", "imp", "tol"]
 
-        os.popen(str(commands[i])).readlines()
+        if "Gray" in filename:
+            params["psz"] = psz
+            param_order.append("psz")
 
-        with open("cmd.json.dat", "w") as file:
-            file.write(json.dumps(commands[i].params))
+        commands = create_commands(cmd, flags, params, param_order)
 
-        files_to_move = datafiles(".")
-        for file in files_to_move:
-            shutil.move(file, results_path)
+        # Clean-up previous attempts
+        files_to_delete = datafiles(".")
+        for file in files_to_delete:
+            os.remove(file)
 
-    percent_done = "%.2f" % ((i + 1)/ncommands * 100)
-    print("Run #{} finished, {}% done.".format(str(i), percent_done))
+        if not os.path.exists("results"):
+            os.mkdir("results")
+        if not os.path.exists("data"):
+            os.mkdir("data")
+
+        for i in range(len(commands)):
+            n = 0
+            while n < n_runs:
+                results_path = "results\\" + filename + "-" + str(size) + "-" + str(n)
+                if not os.path.exists(results_path):
+                    os.mkdir(results_path)
+
+                print(commands[i])
+
+                time1 = time.time()
+                output = os.popen(str(commands[i])).readlines()
+                time2 = time.time()
+                time_taken = time2 - time1
+                print(time_taken)
+
+                if output[-1].rstrip() == "VTR reached - terminating":
+                    with open("data/cmd.json.dat", "w") as file:
+                        file.write(json.dumps(commands[i].params))
+
+                    with open("data/time.dat", "w") as file:
+                        file.write(str(time_taken))
+
+                    files_to_move = listdir("data/")
+                    for file in files_to_move:
+                        shutil.move("data/" + file, results_path)
+
+                    n += 1
+                else:
+                    files_to_delete = listdir("data/")
+                    for file in files_to_move:
+                        shutil.rmtree("data/" + file, results_path)
