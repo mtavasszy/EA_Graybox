@@ -242,7 +242,7 @@ int64_t    random_seed,                      /* The seed used for the random-num
            random_seed_changing;             /* Internally used variable for randomly setting a random seed. */
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=*/
 
-
+clock_t   time_taken;
 
 
 /*-=-=-=-=-=-=-=-=-=-=-=-=-=-= Section Constants -=-=-=-=-=-=-=-=-=-=-=-=-=-*/
@@ -2278,6 +2278,9 @@ void writeGenerationalStatistics( void )
   sprintf( string, " ]\n" );
   fputs( string, file );
   
+  sprintf(string, "time: %lf\n", ((double)time_taken)/CLOCKS_PER_SEC);
+  fputs( string, file );
+
   fclose( file );
 
   free( population_objective_avg );
@@ -3321,6 +3324,8 @@ void ezilaitiniObjectiveRotationMatrix( void )
  */
 void run( void )
 {
+  time_t time = clock();
+    
   initialize();
 
   if( print_verbose_overview )
@@ -3338,9 +3343,13 @@ void run( void )
     
     makePopulations();
 
+    time_taken = clock() - time;
+
     number_of_generations++;
   }
 
+   time_taken = clock() - time;
+  
    writeGenerationalStatistics();
 
    writeGenerationalSolutions( 1 );
