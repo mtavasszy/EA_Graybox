@@ -3,6 +3,7 @@ from os import listdir
 import json
 import matplotlib.pyplot as plt
 from math import log2
+import numpy as np
 
 datadir = "results/"
 
@@ -31,16 +32,16 @@ def read_data(dir):
         problem = "RotatedEllipsoids" if cmd["pro"] == 13 else problem
 
         type = ""
-        type = "AMaLGaM-Blackbox" if "Black" in data_dir else type
-        type = "AMaLGaM-Graybox" if "Gray" in data_dir else type
-        type = "Gomea" if "Gomea" in data_dir else type
+        type = "​AMaLGaM-Blackbox" if "Black" in data_dir else type
+        type = "​​AMaLGaM-Graybox" if "Gray" in data_dir else type
+        type = "RV-Gomea" if "Gomea" in data_dir else type
 
-        problem_size = cmd["psz"] if type == "AMaLGaM-Graybox" else cmd["dim"]
+        problem_size = cmd["psz"] if type == "​​AMaLGaM-Graybox" else cmd["dim"]
 
         pop = cmd["pop"]
         vtr = cmd["vtr"]
 
-        if type == "Gomea":
+        if type == "RV-Gomea":
             pop = 36.1 + 7.58*log2(problem_size)
 
         data_frame.append([problem, type, problem_size, pop, vtr, time, evals])
