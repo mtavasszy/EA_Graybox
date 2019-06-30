@@ -14,10 +14,10 @@ class Command:
         self.param_order = param_order
 
     def __repr__(self):
-        flagstr = " ".join(flags)
+        flagstr = " ".join(self.flags)
         parlist = list(map(lambda p: str(self.params[p]), self.params))
         paramstr = " ".join(parlist)
-        return " ".join([cmd, flagstr, paramstr])
+        return " ".join([self.cmd, flagstr, paramstr])
 
 
 def datafiles(path):
@@ -65,6 +65,7 @@ for filename in os.listdir(dir):
     cmd = ""
     cmd = "amalgam-grey.exe" if "Gray" in filename else cmd
     cmd = "amalgam-black.exe" if "Black" in filename else cmd
+    cmd = "gomea\\\\gomea.exe" if "Gomea" in filename else cmd
 
     with open(dir + filename) as f:
         popPerSize = eval(f.readlines()[0])
@@ -96,6 +97,11 @@ for filename in os.listdir(dir):
         elif "Black" in filename:
             dim = size
             nop = 1
+        elif "Gomea" in filename:
+            dim = size
+            nop = 1
+            sec = [1000000000]
+
         dim = [dim]
         nop = [nop]
 
@@ -116,6 +122,9 @@ for filename in os.listdir(dir):
         if "Gray" in filename:
             params["psz"] = psz
             param_order.append("psz")
+        if "Gomea" in filename:
+            params["sec"] = sec
+            param_order.append("sec")
 
         commands = create_commands(cmd, flags, params, param_order)
 
@@ -143,13 +152,19 @@ for filename in os.listdir(dir):
                 time2 = time.time()
                 time_taken = time2 - time1
                 print(time_taken)
-
-                if output[-1].rstrip() == "VTR reached - terminating":
+                if output[-1].rstrip() == "VTR reached - terminating" or "Gomea" in filename:
                     with open("data/cmd.json.dat", "w") as file:
                         file.write(json.dumps(commands[i].params))
 
                     with open("data/time.dat", "w") as file:
                         file.write(str(time_taken))
+
+                    if "Gomea" in filename:
+                        evals = output[0].split()[1]
+                        with open("data/statistics.dat", "w") as file:
+                            t = str(int(float(evals)))
+                            tt = t + " " + t + " " + t + " " + t + " \r\n"
+                            file.write(tt + tt + tt + tt)
 
                     files_to_move = listdir("data/")
                     for file in files_to_move:
